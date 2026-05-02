@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dummy Course</title>
+  <style>
+    body { font-family: sans-serif; background: #e0f2fe; padding: 2rem; color: #0c4a6e; }
+    button { padding: 0.5rem 1rem; margin-top: 1rem; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Dummy SCORM Course</h1>
+  <p>This is a test course that attempts to communicate with the LMS.</p>
+  <button id="test-btn">Run Test Sequence</button>
+
+  <script>
+    console.log("Dummy course loaded.");
+    
+    // Find API
+    let api = null;
+    let win = window;
+    while (win.parent && win.parent !== win) {
+      if (win.parent.API) {
+        api = win.parent.API;
+        break;
+      }
+      win = win.parent;
+    }
+
+    if (api) {
+      console.info("SCORM 1.2 API found.");
+    } else {
+      console.warn("No SCORM API found.");
+    }
+
+    document.getElementById('test-btn').addEventListener('click', () => {
+      console.log("Starting test sequence...");
+      
+      if (api) {
+        api.LMSInitialize("");
+        api.LMSSetValue("cmi.core.lesson_status", "incomplete");
+        api.LMSSetValue("cmi.core.score.raw", "85");
+        console.warn("Watch out! Score is quite high!");
+        
+        let score = api.LMSGetValue("cmi.core.score.raw");
+        console.info(`Retrieved score: ${score}`);
+        
+        api.LMSCommit("");
+        api.LMSFinish("");
+      }
+
+      // Generate an error to test the interceptor
+      setTimeout(() => {
+        throw new Error("This is a simulated course error.");
+      }, 500);
+    });
+  </script>
+</body>
+</html>
