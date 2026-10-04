@@ -161,8 +161,28 @@ class SCORMApi2004 {
   }
 }
 
-export function injectSCORMApis(targetWindow) {
-  targetWindow.API = new SCORMApi12();
-  targetWindow.API_1484_11 = new SCORMApi2004();
-  logger.info("SCORM APIs (1.2 and 2004) injected into iframe window.");
+// One LMS session per course launch: both API flavours plus their cmi data.
+let session = null;
+
+/**
+ * Start a fresh session (new API objects, empty cmi data) and expose it on `win`,
+ * so a relaunched course can Initialize again instead of getting error 101.
+ */
+export function startSession(win) {
+  session = { api12: new SCORMApi12(), api2004: new SCORMApi2004() };
+  exposeSession(win);
+  logger.info("New SCORM session: API (1.2) and API_1484_11 (2004) ready.");
+}
+
+/**
+ * Expose the *current* session on another window (e.g. a same-origin course iframe),
+ * so courses that look on their own window and courses that walk `window.parent`
+ * talk to the same API objects.
+ */
+export function exposeSession(win) {
+  if (!session) {
+    session = { api12: new SCORMApi12(), api2004: new SCORMApi2004() };
+  }
+  win.API = session.api12;
+  win.API_1484_11 = session.api2004;
 }

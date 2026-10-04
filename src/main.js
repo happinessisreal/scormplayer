@@ -1,5 +1,5 @@
 import { logger } from './logger.js';
-import { injectSCORMApis } from './scorm-api.js';
+import { startSession, exposeSession } from './scorm-api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const urlInput = document.getElementById('course-url');
@@ -104,7 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     logger.info(`Loading course from: ${url}`);
-    
+
+    // Fresh LMS session for every launch (the previous course may never have terminated)
+    startSession(window);
+
     // Reset iframe to clear previous content and listeners
     iframe.src = 'about:blank';
     
@@ -123,10 +126,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const contentWindow = iframe.contentWindow;
       
-      if (!contentWindow) return;
+      if (!contentWindow || contentWindow.location.href === 'about:blank') return;
 
-      // Inject SCORM API
-      injectSCORMApis(contentWindow);
+      // Share the current session's API objects with the course window
+      exposeSession(contentWindow);
 
       // Intercept console
       const originalConsole = {
@@ -189,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupIframeInterceptors();
   });
 
-  // CRITICAL: Expose SCORM APIs on the main window so cross-origin iframes can find it via window.parent.API
-  // Some courses do: while (win.parent && win.parent != win) { if (win.parent.API) return win.parent.API; }
-  injectSCORMApis(window);
+  // CRITICAL: Expose SCORM APIs on the main window so courses can find them via window.parent.API
+  // Most courses do: while (win.parent && win.parent != win) { if (win.parent.API) return win.parent.API; }
+  startSession(window);
 });

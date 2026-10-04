@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sample SCORM 2004 quiz</title>
+  <style>
+    :root { --ink: #0f172a; --dim: #64748b; --accent: #6366f1; --ok: #16a34a; --bad: #dc2626; --line: #e2e8f0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 Inter, system-ui, sans-serif; color: var(--ink); background: linear-gradient(160deg, #eef2ff, #f8fafc 55%); min-height: 100vh; }
+    main { max-width: 640px; margin: 0 auto; padding: 40px 24px; }
+    .eyebrow { color: var(--accent); font-weight: 600; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 6px 0 4px; font-size: 26px; }
+    .sub { color: var(--dim); margin: 0 0 24px; }
+    fieldset { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 16px 18px; margin: 0 0 14px; }
+    legend { font-weight: 600; padding: 0 6px; }
+    label { display: flex; gap: 10px; align-items: center; padding: 6px 4px; border-radius: 8px; cursor: pointer; }
+    label:hover { background: #f1f5f9; }
+    button { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 11px 20px; font: 600 15px Inter, sans-serif; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    .result { margin-top: 18px; padding: 14px 18px; border-radius: 12px; font-weight: 600; display: none; }
+    .result.pass { display: block; background: #dcfce7; color: var(--ok); }
+    .result.fail { display: block; background: #fee2e2; color: var(--bad); }
+    .status { margin-top: 22px; font-size: 12px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">SCORM 2004 · sample SCO</div>
+    <h1>Quick quiz: e-learning standards</h1>
+    <p class="sub">Answer all three, then submit. Your score is reported to the LMS through <code>API_1484_11</code>.</p>
+
+    <form id="quiz">
+      <fieldset>
+        <legend>1. What does the "S" in SCORM stand for?</legend>
+        <label><input type="radio" name="q1" value="0" /> Standard</label>
+        <label><input type="radio" name="q1" value="1" /> Sharable</label>
+        <label><input type="radio" name="q1" value="0" /> Secure</label>
+      </fieldset>
+      <fieldset>
+        <legend>2. Which file describes a SCORM package?</legend>
+        <label><input type="radio" name="q2" value="0" /> index.html</label>
+        <label><input type="radio" name="q2" value="1" /> imsmanifest.xml</label>
+        <label><input type="radio" name="q2" value="0" /> package.json</label>
+      </fieldset>
+      <fieldset>
+        <legend>3. Which call must a SCORM 2004 SCO make first?</legend>
+        <label><input type="radio" name="q3" value="0" /> Commit("")</label>
+        <label><input type="radio" name="q3" value="0" /> LMSInitialize("")</label>
+        <label><input type="radio" name="q3" value="1" /> Initialize("")</label>
+      </fieldset>
+      <button type="submit" id="submit">Submit answers</button>
+    </form>
+    <div class="result" id="result"></div>
+    <div class="status" id="status">Looking for the LMS…</div>
+  </main>
+
+  <script>
+    // Standard SCORM 2004 API discovery: walk up the parent frames (and the opener).
+    function findAPI(win) {
+      for (let depth = 0; win && depth < 10; depth++) {
+        if (win.API_1484_11) return win.API_1484_11;
+        if (win.parent === win) break;
+        win = win.parent;
+      }
+      return null;
+    }
+    const api = findAPI(window) || (window.opener && findAPI(window.opener));
+    const status = document.getElementById('status');
+
+    if (api && api.Initialize('') === 'true') {
+      status.textContent = 'Connected to LMS · session initialized';
+      console.info('SCORM 2004 API found and initialized.');
+      api.SetValue('cmi.completion_status', 'incomplete');
+      api.SetValue('cmi.score.min', '0');
+      api.SetValue('cmi.score.max', '3');
+    } else {
+      status.textContent = 'No LMS found: running standalone (results are not reported).';
+      console.warn('No SCORM 2004 API (API_1484_11) found.');
+    }
+
+    document.getElementById('quiz').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const answers = ['q1', 'q2', 'q3'].map((q) => document.querySelector(`input[name=${q}]:checked`));
+      if (answers.some((a) => !a)) {
+        console.warn('Learner tried to submit with unanswered questions.');
+        alert('Please answer every question first.');
+        return;
+      }
+      const score = answers.reduce((n, a) => n + Number(a.value), 0);
+      const passed = score >= 2;
+
+      const box = document.getElementById('result');
+      box.className = `result ${passed ? 'pass' : 'fail'}`;
+      box.textContent = `You scored ${score}/3 — ${passed ? 'passed 🎉' : 'not quite, try again!'}`;
+      document.getElementById('submit').disabled = true;
+
+      console.log(`Quiz submitted: ${score}/3`);
+      if (api) {
+        api.SetValue('cmi.score.raw', String(score));
+        api.SetValue('cmi.score.scaled', (score / 3).toFixed(2));
+        api.SetValue('cmi.success_status', passed ? 'passed' : 'failed');
+        api.SetValue('cmi.completion_status', 'completed');
+        api.Commit('');
+        api.Terminate('');
+        status.textContent = 'Results sent to LMS · session terminated';
+      }
+    });
+  </script>
+</body>
+</html>
