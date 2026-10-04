@@ -6,6 +6,8 @@
 
 **A local test harness for e-learning content.** Drop in a SCORM package and it validates the manifest against the official ADL schemas, runs the course, and shows every LMS API call, console message and error as it happens.
 
+<sub><i>The logo: the play button is a Penrose triangle, an impossible object, like full SCORM compliance.</i></sub>
+
 [![CI](https://github.com/happinessisreal/scormplayer/actions/workflows/ci.yml/badge.svg)](https://github.com/happinessisreal/scormplayer/actions/workflows/ci.yml)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](vite.config.js)
 [![SCORM](https://img.shields.io/badge/SCORM-1.2_%7C_2004_4th_Ed.-0ea5e9)](#-what-it-checks)
